@@ -4,28 +4,47 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ─── Instrack custom tokens ─────────────────────────────────────── */
+/* ─── Instrack design tokens ─────────────────────────────────────────────── */
+:root {
+  /* Base layers — each panel should feel visually distinct */
+  --bg-base:        #0b1120;   /* page background — deep navy */
+  --bg-panel:       #111827;   /* schematic and main panels */
+  --bg-card:        #1a2236;   /* KPI cards, schedule panel */
+  --bg-card-hover:  #1f2a42;   /* card hover state */
+  --bg-inset:       #0f1729;   /* inset elements, chart backgrounds */
+
+  /* Borders — visible but not harsh */
+  --border-strong:  #2d3f5c;   /* panel edges */
+  --border-soft:    #1e2d45;   /* subtle dividers */
+  --border-accent:  #334466;   /* highlighted borders */
+
+  /* Text */
+  --text-primary:   #e8edf5;   /* main content */
+  --text-secondary: #8fa3be;   /* labels, captions */
+  --text-muted:     #4a6080;   /* placeholders, disabled */
+
+  /* Status colours — vibrant against the navy base */
+  --status-complete:    #22c55e;
+  --status-complete-bg: #0f2e1a;
+  --status-progress:    #f59e0b;
+  --status-progress-bg: #2a1f08;
+  --status-blocked:     #ef4444;
+  --status-blocked-bg:  #2a0f0f;
+  --status-none:        #4a6080;
+  --status-none-bg:     #131f30;
+
+  /* Accent */
+  --accent:         #3b82f6;   /* Instrack brand blue */
+  --accent-amber:   #f59e0b;   /* logistics markers, today line */
+}
+
+/* ─── Tailwind design tokens (fonts, radius) ─────────────────────────────── */
 @theme {
-  /* Colours */
-  --color-ink-base:    #060d14;
-  --color-ink-surface: #080f18;
-  --color-ink-card:    #0d1623;
-  --color-ink-border:  #1f2937;
-  --color-ink-muted:   #374151;
-
-  --color-status-complete:    #16a34a;
-  --color-status-in-progress: #d97706;
-  --color-status-blocked:     #dc2626;
-  --color-status-not-started: #4b5563;
-
-  --color-amber:       #d97706;
-  --color-amber-light: #fbbf24;
-
-  /* Fonts */
   --font-mono:    "JetBrains Mono", ui-monospace, monospace;
   --font-display: "Barlow Condensed", ui-sans-serif, sans-serif;
 }
 
+/* ─── Shadcn token mapping ───────────────────────────────────────────────── */
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -64,73 +83,40 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* ─── Shadcn base palette (dark mode throughout) ─────────────────────────── */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --radius: 0.5rem;
+  --background: #0b1120;
+  --foreground: #e8edf5;
+  --card: #1a2236;
+  --card-foreground: #e8edf5;
+  --popover: #1a2236;
+  --popover-foreground: #e8edf5;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e2d45;
+  --secondary-foreground: #8fa3be;
+  --muted: #1e2d45;
+  --muted-foreground: #4a6080;
+  --accent: #1e2d45;
+  --accent-foreground: #e8edf5;
+  --destructive: #ef4444;
+  --border: #2d3f5c;
+  --input: #1e2d45;
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #22c55e;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #a855f7;
+  --sidebar: #111827;
+  --sidebar-foreground: #e8edf5;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e2d45;
+  --sidebar-accent-foreground: #e8edf5;
+  --sidebar-border: #2d3f5c;
+  --sidebar-ring: #3b82f6;
 }
 
 @layer base {
@@ -139,5 +125,6 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
   }
 }

@@ -1,15 +1,7 @@
 import PhaseProgress from "./PhaseProgress"
 import { trackSections } from "@/data/route"
-import { deriveOverallStatus, STATUS } from "@/lib/status"
+import { deriveOverallStatus, STATUS, STATUS_COLOUR, STATUS_BG } from "@/lib/status"
 import type { TrackSection } from "@/types"
-
-// Colours per spec
-const CARD_COLOURS = {
-  total:      "#e5e7eb",
-  complete:   "#34d399",
-  inProgress: "#fbbf24",
-  blocked:    "#f87171",
-} as const
 
 interface KpiBarProps {
   selectedSection: TrackSection | null
@@ -30,37 +22,51 @@ interface StatCardProps {
   label: string
   value: number | string
   colour: string
+  bgColour: string
   sub?: string
 }
 
-function StatCard({ label, value, colour, sub }: StatCardProps) {
+function StatCard({ label, value, colour, bgColour, sub }: StatCardProps) {
   return (
     <div
-      className="flex-1 rounded-lg overflow-hidden"
+      className="flex-1 rounded-lg overflow-hidden transition-colors"
       style={{
-        background:   "#0d1520",
-        border:       "1px solid #1f2937",
+        background:   "var(--bg-card)",
+        border:       "1px solid var(--border-soft)",
         borderBottom: `3px solid ${colour}`,
+        boxShadow:    "0 2px 8px rgba(0,0,0,0.4)",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.background = "var(--bg-card-hover)"
+        el.style.borderColor = "var(--border-accent)"
+        el.style.borderBottomColor = colour
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.background = "var(--bg-card)"
+        el.style.borderColor = "var(--border-soft)"
+        el.style.borderBottomColor = colour
       }}
     >
       <div className="px-4 pt-4 pb-3">
         <div
-          className="uppercase tracking-widest mb-2"
+          className="uppercase mb-2"
           style={{
-            fontSize: "9px",
-            fontFamily: "JetBrains Mono, monospace",
-            color: "#6b7280",
+            fontSize:      "11px",
+            fontFamily:    "JetBrains Mono, monospace",
             letterSpacing: "0.12em",
+            color:         "var(--text-muted)",
           }}
         >
           {label}
         </div>
         <div
           style={{
-            fontSize: "32px",
+            fontSize:   "34px",
             fontFamily: "Barlow Condensed, var(--font-display), sans-serif",
             fontWeight: 700,
-            color: colour,
+            color:      colour,
             lineHeight: 1,
           }}
         >
@@ -70,9 +76,9 @@ function StatCard({ label, value, colour, sub }: StatCardProps) {
           <div
             className="mt-1"
             style={{
-              fontSize: "10px",
+              fontSize:  "11px",
               fontFamily: "JetBrains Mono, monospace",
-              color: "#374151",
+              color:     "var(--text-muted)",
             }}
           >
             {sub}
@@ -89,23 +95,47 @@ export default function KpiBar({ selectedSection }: KpiBarProps) {
   const { complete, inProgress, blocked } = countByStatus(displaySections)
   const total = displaySections.length
 
+  // Derive the selected section's overall status for the highlight strip
+  const selectedStatus = isFiltered
+    ? deriveOverallStatus(
+        selectedSection.installation,
+        selectedSection.commissioning,
+        selectedSection.handover,
+      )
+    : null
+
   return (
     <div
-      className="shrink-0 px-6 py-4"
-      style={{ background: "#080f18", borderColor: "#1f2937" }}
+      className="shrink-0 px-6 py-5"
+      style={{
+        background:  "var(--bg-base)",
+        borderTop:   "1px solid var(--border-strong)",
+        borderBottom: "1px solid var(--border-strong)",
+      }}
     >
-      {/* Section context label when filtered */}
-      {isFiltered && (
+      {/* Section context banner — highlighted with left status strip */}
+      {isFiltered && selectedStatus && (
         <div
-          className="uppercase tracking-widest mb-3"
+          className="flex items-center gap-3 rounded mb-4 px-3 py-2"
           style={{
-            fontSize: "10px",
-            fontFamily: "JetBrains Mono, monospace",
-            color: "#d97706",
-            letterSpacing: "0.12em",
+            background:  "var(--bg-card-hover)",
+            borderLeft:  `3px solid ${STATUS_COLOUR[selectedStatus]}`,
           }}
         >
-          Section {selectedSection.id} · {selectedSection.length} · {selectedSection.type}
+          <span
+            style={{
+              fontSize:      "11px",
+              fontFamily:    "JetBrains Mono, monospace",
+              letterSpacing: "0.08em",
+              color:         STATUS_COLOUR[selectedStatus],
+              fontWeight:    600,
+            }}
+          >
+            Section {selectedSection.id}
+          </span>
+          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+            {selectedSection.length} · {selectedSection.type}
+          </span>
         </div>
       )}
 
@@ -113,23 +143,27 @@ export default function KpiBar({ selectedSection }: KpiBarProps) {
         <StatCard
           label={isFiltered ? "Section" : "Total Sections"}
           value={total}
-          colour={CARD_COLOURS.total}
+          colour="var(--text-primary)"
+          bgColour="var(--bg-inset)"
         />
         <StatCard
           label="Complete"
           value={complete}
-          colour={CARD_COLOURS.complete}
+          colour={STATUS_COLOUR.COMPLETE}
+          bgColour={STATUS_BG.COMPLETE}
           sub={!isFiltered ? `${Math.round((complete / total) * 100)}%` : undefined}
         />
         <StatCard
           label="In Progress"
           value={inProgress}
-          colour={CARD_COLOURS.inProgress}
+          colour={STATUS_COLOUR.IN_PROGRESS}
+          bgColour={STATUS_BG.IN_PROGRESS}
         />
         <StatCard
           label="Blocked"
           value={blocked}
-          colour={CARD_COLOURS.blocked}
+          colour={STATUS_COLOUR.BLOCKED}
+          bgColour={STATUS_BG.BLOCKED}
         />
       </div>
 

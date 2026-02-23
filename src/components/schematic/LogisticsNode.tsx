@@ -28,7 +28,7 @@ function LogisticsNode({ data }: NodeProps<LogisticsNodeData>) {
     <Tooltip>
       <TooltipTrigger asChild>
         <div className="relative flex flex-col items-center cursor-default select-none">
-          {/* Connector line down to track */}
+          {/* Dashed connector to track */}
           <svg
             className="absolute top-full left-1/2 -translate-x-1/2 pointer-events-none"
             width="2"
@@ -37,37 +37,49 @@ function LogisticsNode({ data }: NodeProps<LogisticsNodeData>) {
           >
             <line
               x1="1" y1="0" x2="1" y2={connectorHeight}
-              stroke="#d97706"
+              stroke="var(--accent-amber)"
               strokeWidth="1.5"
               strokeDasharray="4 3"
-              opacity="0.4"
+              opacity="0.35"
             />
           </svg>
 
           {/* Node pill */}
           <div
-            className="flex items-center gap-1.5 rounded px-2 py-1 border text-xs font-mono"
+            className="flex items-center gap-1.5 rounded px-2 py-1 border"
             style={{
-              background: "#0d1623",
-              borderColor: "#d9770640",
-              color: "#d97706",
+              background:  "var(--bg-card)",
+              borderColor: "var(--border-strong)",
+              color:       "var(--accent-amber)",
+              fontSize:    "11px",
+              fontFamily:  "JetBrains Mono, monospace",
             }}
           >
-            <span className="text-sm leading-none">{ICON[data.type]}</span>
-            <span className="text-[10px] font-semibold whitespace-nowrap">{data.label}</span>
+            <span style={{ fontSize: "12px", lineHeight: 1 }}>{ICON[data.type]}</span>
+            <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{data.label}</span>
           </div>
 
           <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
         </div>
       </TooltipTrigger>
+
       <TooltipContent
         side="top"
-        className="font-mono text-xs max-w-52"
-        style={{ background: "#0d1623", border: "1px solid #1f2937", color: "#e2e8f0" }}
+        className="font-mono max-w-52"
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-strong)",
+          color: "var(--text-primary)",
+          fontSize: "12px",
+        }}
       >
         <div className="font-semibold">{data.label}</div>
-        <div style={{ color: "#64748b" }}>{TYPE_LABEL[data.type]} · {data.km.toFixed(1)} km</div>
-        <div style={{ color: "#94a3b8" }} className="mt-1 text-[11px] leading-relaxed">{data.notes}</div>
+        <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>
+          {TYPE_LABEL[data.type]} · {data.km.toFixed(1)} km
+        </div>
+        <div style={{ color: "var(--text-secondary)", marginTop: "6px", fontSize: "11px", lineHeight: 1.5 }}>
+          {data.notes}
+        </div>
       </TooltipContent>
     </Tooltip>
   )

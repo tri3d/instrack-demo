@@ -13,9 +13,9 @@ export default function App() {
     <TooltipProvider delayDuration={300}>
       <div
         className="flex flex-col h-screen overflow-hidden"
-        style={{ background: "#060d14", fontFamily: "var(--font-mono)" }}
+        style={{ background: "var(--bg-base)", fontFamily: "var(--font-mono)" }}
       >
-        {/* Topbar — ~52px */}
+        {/* Topbar */}
         <Topbar />
 
         {/* Track schematic — fixed 280px */}
@@ -27,7 +27,7 @@ export default function App() {
         {/* KPI cards + phase breakdown */}
         <KpiBar selectedSection={selectedSection} />
 
-        {/* Schedule area — placeholder or Gantt panel */}
+        {/* Schedule area */}
         {selectedSection ? (
           <SchedulePanel
             section={selectedSection}
@@ -35,20 +35,14 @@ export default function App() {
           />
         ) : (
           <div
-            className="shrink-0 flex items-center justify-center border-t"
+            className="shrink-0 flex items-center justify-center"
             style={{
-              height: "64px",
-              background: "#080f18",
-              borderColor: "#1f2937",
+              height: "56px",
+              background: "var(--bg-card)",
+              borderTop: "1px solid var(--border-strong)",
             }}
           >
-            <span
-              style={{
-                fontSize: "11px",
-                fontFamily: "JetBrains Mono, monospace",
-                color: "#2d3f52",
-              }}
-            >
+            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
               ↑ Click a track section to view its schedule
             </span>
           </div>

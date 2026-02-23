@@ -16,7 +16,6 @@ function StationNode({ data }: NodeProps<StationNodeData>) {
     (s) => s.from === data.id || s.to === data.id,
   )
 
-  // Derive worst status of all adjacent sections for border colour
   const overallStatuses = adjacent.map((s) =>
     deriveOverallStatus(s.installation, s.commissioning, s.handover),
   )
@@ -30,26 +29,26 @@ function StationNode({ data }: NodeProps<StationNodeData>) {
     <Tooltip>
       <TooltipTrigger asChild>
         <div className="relative flex flex-col items-center cursor-default select-none">
-          {/* Label above */}
+          {/* Station label above */}
           <div
             className="absolute whitespace-nowrap font-semibold"
             style={{
-              top: "-20px",
-              fontSize: "10px",
+              top: "-22px",
+              fontSize: "11px",
               fontFamily: "JetBrains Mono, monospace",
-              color: "#cbd5e1",
+              color: "var(--text-primary)",
             }}
           >
             {data.label}
           </div>
 
-          {/* Diamond — consistent dark fill, status-coded border */}
+          {/* Diamond — bg-panel fill, status-coded border */}
           <div
             className="h-5 w-5 rotate-45 border-2"
             style={{
-              background:  "#0d1623",
+              background:  "var(--bg-panel)",
               borderColor: borderColour,
-              boxShadow:   `0 0 8px ${borderColour}60`,
+              boxShadow:   `0 0 10px ${borderColour}50`,
             }}
           />
 
@@ -57,10 +56,10 @@ function StationNode({ data }: NodeProps<StationNodeData>) {
           <div
             className="absolute whitespace-nowrap"
             style={{
-              bottom: "-16px",
-              fontSize: "9px",
+              bottom: "-18px",
+              fontSize: "10px",
               fontFamily: "JetBrains Mono, monospace",
-              color: "#475569",
+              color: "var(--text-muted)",
             }}
           >
             {data.km.toFixed(1)} km
@@ -73,15 +72,20 @@ function StationNode({ data }: NodeProps<StationNodeData>) {
 
       <TooltipContent
         side="top"
-        style={{ background: "#0d1623", border: "1px solid #1f2937", color: "#e2e8f0" }}
-        className="font-mono text-xs"
+        className="font-mono"
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-strong)",
+          color: "var(--text-primary)",
+          fontSize: "12px",
+        }}
       >
         <div className="font-semibold">{data.label}</div>
-        <div style={{ color: "#64748b" }}>
+        <div style={{ color: "var(--text-secondary)", marginTop: "2px" }}>
           {data.km.toFixed(1)} km · {data.type}
         </div>
         {adjacent.length > 0 && (
-          <div style={{ color: "#64748b" }} className="mt-1">
+          <div style={{ color: "var(--text-muted)", marginTop: "4px" }}>
             Sections: {adjacent.map((s) => s.label).join(", ")}
           </div>
         )}

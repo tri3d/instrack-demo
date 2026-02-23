@@ -22,11 +22,11 @@ import type { TrackSection } from "@/types"
 // ─── Layout constants ──────────────────────────────────────────────────────
 
 const KM_SCALE    = 90   // px per km
-const TRACK_Y     = 120  // Y for station nodes inside the 280px canvas
-const LOGISTICS_Y = 20   // Y for logistics nodes (above the track)
+const TRACK_Y     = 120  // station node Y inside the 280px canvas
+const LOGISTICS_Y = 20   // logistics node Y
 const LOGISTICS_CONNECTOR_H = TRACK_Y - LOGISTICS_Y - 32
 
-// ─── Node / edge type maps — defined outside component to avoid remounting ──
+// ─── Node / edge type maps — outside component to prevent remounting ───────
 
 const nodeTypes: NodeTypes = {
   stationNode:   StationNode,
@@ -36,8 +36,6 @@ const nodeTypes: NodeTypes = {
 const edgeTypes: EdgeTypes = {
   trackEdge: TrackEdge,
 }
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
 
 function kmToX(km: number) {
   return km * KM_SCALE + 60
@@ -75,7 +73,6 @@ export default function TrackSchematic({
       data:      n,
       draggable: false,
     }))
-
     const logNodes: Node<LogisticsNodeData>[] = logisticsPoints.map((lp) => ({
       id:        lp.id,
       type:      "logisticsNode",
@@ -83,7 +80,6 @@ export default function TrackSchematic({
       data:      { ...lp, trackY: LOGISTICS_CONNECTOR_H },
       draggable: false,
     }))
-
     return [...stationNodes, ...logNodes]
   }, [])
 
@@ -93,17 +89,30 @@ export default function TrackSchematic({
       source: s.from,
       target: s.to,
       type:   "trackEdge",
-      data:   {
-        ...s,
-        isSelected: s.id === selectedSectionId,
-      } satisfies TrackEdgeData,
+      data:   { ...s, isSelected: s.id === selectedSectionId } satisfies TrackEdgeData,
     }))
   }, [selectedSectionId])
 
   return (
+    // Outer container: gradient creates the "rail bed" band at ~60% height
+    // ReactFlow renders transparently on top so the band shows through the canvas
     <div
-      className="w-full shrink-0 border-y"
-      style={{ height: "280px", background: "#060d14", borderColor: "#1f2937" }}
+      className="w-full shrink-0"
+      style={{
+        height: "280px",
+        borderTop: "1px solid var(--border-strong)",
+        borderBottom: "1px solid var(--border-strong)",
+        // Subtle inset band behind the track line (≈60% of 280px = 168px)
+        background: `linear-gradient(
+          to bottom,
+          var(--bg-panel)  0px,
+          var(--bg-panel)  calc(60% - 8px),
+          var(--bg-inset)  calc(60% - 8px),
+          var(--bg-inset)  calc(60% + 8px),
+          var(--bg-panel)  calc(60% + 8px),
+          var(--bg-panel)  100%
+        )`,
+      }}
     >
       <ReactFlow
         nodes={nodes}
@@ -117,22 +126,28 @@ export default function TrackSchematic({
         nodesConnectable={false}
         panOnScroll
         zoomOnScroll={false}
-        style={{ background: "#060d14" }}
+        style={{ background: "transparent" }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1}
-          color="#1a2535"
+          color="var(--border-soft)"
         />
         <Controls
-          style={{ background: "#0d1623", border: "1px solid #1f2937" }}
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-strong)",
+          }}
         />
         <MiniMap
           position="bottom-right"
-          style={{ background: "#080f18", border: "1px solid #1f2937" }}
-          nodeColor="#1f2937"
-          maskColor="#060d1490"
+          style={{
+            background: "var(--bg-panel)",
+            border: "1px solid var(--border-strong)",
+          }}
+          nodeColor="var(--border-accent)"
+          maskColor="#0b112080"
         />
       </ReactFlow>
     </div>

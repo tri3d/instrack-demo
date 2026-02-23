@@ -5,30 +5,25 @@ import type { TrackSection } from "@/types"
 
 export type TrackEdgeData = TrackSection & { isSelected: boolean }
 
-// ─── Rail geometry constants ───────────────────────────────────────────────
-// All values in graph-space pixels. The canvas fitView zoom is ~0.65,
-// so a 14px rail half-gap renders as ~9px on screen — clearly dual-rail.
-const RAIL_HALF       = 7   // distance from track centre to each rail centreline
-const SLEEPER_HALF    = 14  // half-length of each sleeper (from track centre to tip)
-const SLEEPER_SPACING = 22  // spacing between sleeper centres along the track
-const RAIL_WIDTH      = 2   // stroke width of each rail
-const SLEEPER_WIDTH   = 1.5 // stroke width of each sleeper
+// ─── Rail geometry ─────────────────────────────────────────────────────────
+const RAIL_HALF       = 7   // graph-px: distance from centre to each rail
+const SLEEPER_HALF    = 14  // graph-px: half-length of each sleeper
+const SLEEPER_SPACING = 22  // graph-px: sleeper centre-to-centre
+const RAIL_WIDTH      = 2
+const SLEEPER_WIDTH   = 1.5
 
 function buildGeometry(x1: number, y1: number, x2: number, y2: number) {
-  const dx = x2 - x1
-  const dy = y2 - y1
+  const dx  = x2 - x1
+  const dy  = y2 - y1
   const len = Math.sqrt(dx * dx + dy * dy)
   if (len === 0) return { topRail: "", botRail: "", sleepers: [] as string[] }
 
-  // Unit perpendicular (rotated 90° from travel direction)
-  const px = -dy / len
+  const px = -dy / len  // unit perpendicular
   const py =  dx / len
 
-  // Rail centre-lines at ±RAIL_HALF from track centre
   const topRail = `M${x1 + px * RAIL_HALF},${y1 + py * RAIL_HALF} L${x2 + px * RAIL_HALF},${y2 + py * RAIL_HALF}`
   const botRail = `M${x1 - px * RAIL_HALF},${y1 - py * RAIL_HALF} L${x2 - px * RAIL_HALF},${y2 - py * RAIL_HALF}`
 
-  // Sleepers: perpendicular ticks at regular intervals
   const count = Math.max(0, Math.floor(len / SLEEPER_SPACING) - 1)
   const sleepers: string[] = []
   for (let i = 1; i <= count; i++) {
@@ -45,7 +40,6 @@ function buildGeometry(x1: number, y1: number, x2: number, y2: number) {
 
 function TrackEdge(props: EdgeProps<TrackEdgeData>) {
   const { id, sourceX, sourceY, targetX, targetY, data } = props
-
   if (!data) return null
 
   const overall    = deriveOverallStatus(data.installation, data.commissioning, data.handover)
@@ -53,16 +47,16 @@ function TrackEdge(props: EdgeProps<TrackEdgeData>) {
   const isSelected = data.isSelected
 
   const { topRail, botRail, sleepers } = buildGeometry(sourceX, sourceY, targetX, targetY)
-  const midX = (sourceX + targetX) / 2
-  const midY = (sourceY + targetY) / 2
+  const midX     = (sourceX + targetX) / 2
+  const midY     = (sourceY + targetY) / 2
   const filterId = `glow-${id}`
 
   return (
     <g style={{ cursor: "pointer" }}>
       {isSelected && (
         <defs>
-          <filter id={filterId} x="-30%" y="-200%" width="160%" height="500%">
-            <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <filter id={filterId} x="-30%" y="-300%" width="160%" height="700%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -71,7 +65,7 @@ function TrackEdge(props: EdgeProps<TrackEdgeData>) {
         </defs>
       )}
 
-      {/* Invisible wide hit area — makes the edge easy to click */}
+      {/* Wide invisible hit area */}
       <path
         d={`M${sourceX},${sourceY} L${targetX},${targetY}`}
         stroke="transparent"
@@ -79,25 +73,25 @@ function TrackEdge(props: EdgeProps<TrackEdgeData>) {
         fill="none"
       />
 
-      {/* Sleepers */}
+      {/* Sleeper ticks — 40% opacity when not selected */}
       {sleepers.map((d, i) => (
         <path
           key={i}
           d={d}
-          stroke={isSelected ? colour : "#2d3f52"}
+          stroke={isSelected ? colour : "#2d3f5c"}
           strokeWidth={SLEEPER_WIDTH}
-          opacity={isSelected ? 0.9 : 0.7}
+          opacity={isSelected ? 0.9 : 0.4}
           filter={isSelected ? `url(#${filterId})` : undefined}
         />
       ))}
 
-      {/* Top rail */}
+      {/* Top rail — 90% opacity when not selected */}
       <path
         d={topRail}
         stroke={colour}
         strokeWidth={RAIL_WIDTH}
         fill="none"
-        opacity={isSelected ? 1 : 0.75}
+        opacity={isSelected ? 1 : 0.9}
         filter={isSelected ? `url(#${filterId})` : undefined}
       />
 
@@ -107,7 +101,7 @@ function TrackEdge(props: EdgeProps<TrackEdgeData>) {
         stroke={colour}
         strokeWidth={RAIL_WIDTH}
         fill="none"
-        opacity={isSelected ? 1 : 0.75}
+        opacity={isSelected ? 1 : 0.9}
         filter={isSelected ? `url(#${filterId})` : undefined}
       />
 
@@ -119,7 +113,7 @@ function TrackEdge(props: EdgeProps<TrackEdgeData>) {
         fontSize={11}
         fontFamily="JetBrains Mono, monospace"
         fontWeight={600}
-        fill={isSelected ? "#e2e8f0" : "#64748b"}
+        fill={isSelected ? "#e8edf5" : "#4a6080"}
       >
         {data.label}
       </text>
@@ -130,7 +124,7 @@ function TrackEdge(props: EdgeProps<TrackEdgeData>) {
         cy={midY + 18}
         r={3.5}
         fill={colour}
-        opacity={isSelected ? 1 : 0.8}
+        opacity={isSelected ? 1 : 0.85}
       />
     </g>
   )

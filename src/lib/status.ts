@@ -3,18 +3,27 @@
 export const STATUS = {
   NOT_STARTED: "NOT_STARTED",
   IN_PROGRESS: "IN_PROGRESS",
-  COMPLETE: "COMPLETE",
-  BLOCKED: "BLOCKED",
+  COMPLETE:    "COMPLETE",
+  BLOCKED:     "BLOCKED",
 } as const
 
 export type Status = (typeof STATUS)[keyof typeof STATUS]
 
-// Tailwind utility class tokens (use with cn())
+// Foreground colours — matched to the navy theme CSS variables
+// Keep as JS values (not CSS vars) so they work in SVG attributes
 export const STATUS_COLOUR: Record<Status, string> = {
-  NOT_STARTED: "#4b5563",
-  IN_PROGRESS: "#d97706",
-  COMPLETE:    "#16a34a",
-  BLOCKED:     "#dc2626",
+  NOT_STARTED: "#4a6080",  // --status-none
+  IN_PROGRESS: "#f59e0b",  // --status-progress
+  COMPLETE:    "#22c55e",  // --status-complete
+  BLOCKED:     "#ef4444",  // --status-blocked
+}
+
+// Background tints for badges / headers
+export const STATUS_BG: Record<Status, string> = {
+  NOT_STARTED: "#131f30",  // --status-none-bg
+  IN_PROGRESS: "#2a1f08",  // --status-progress-bg
+  COMPLETE:    "#0f2e1a",  // --status-complete-bg
+  BLOCKED:     "#2a0f0f",  // --status-blocked-bg
 }
 
 export const STATUS_LABEL: Record<Status, string> = {

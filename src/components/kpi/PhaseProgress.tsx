@@ -9,12 +9,20 @@ import {
 import { STATUS, STATUS_LABEL } from "@/lib/status"
 import type { TrackSection } from "@/types"
 
-// Phase breakdown colours per spec
+// Mapped to new navy theme status tokens
 const PHASE_COLOURS = {
-  [STATUS.COMPLETE]:    "#059669",
-  [STATUS.IN_PROGRESS]: "#d97706",
-  [STATUS.BLOCKED]:     "#dc2626",
-  [STATUS.NOT_STARTED]: "#374151",
+  [STATUS.COMPLETE]:    "var(--status-complete)",
+  [STATUS.IN_PROGRESS]: "var(--status-progress)",
+  [STATUS.BLOCKED]:     "var(--status-blocked)",
+  [STATUS.NOT_STARTED]: "var(--status-none)",
+} as const
+
+// Recharts needs resolved hex values for SVG fill — CSS vars don't work in SVG attributes
+const PHASE_COLOURS_HEX = {
+  [STATUS.COMPLETE]:    "#22c55e",
+  [STATUS.IN_PROGRESS]: "#f59e0b",
+  [STATUS.BLOCKED]:     "#ef4444",
+  [STATUS.NOT_STARTED]: "#4a6080",
 } as const
 
 interface PhaseProgressProps {
@@ -29,7 +37,7 @@ const PHASES = [
 
 type PhaseKey = (typeof PHASES)[number]["key"]
 
-// Stack order — render NOT_STARTED first (back) so status colours sit on top
+// Stack order: NOT_STARTED at back so status colours always visible on top
 const STACK_ORDER = [
   STATUS.NOT_STARTED,
   STATUS.BLOCKED,
@@ -56,83 +64,83 @@ export default function PhaseProgress({ sections }: PhaseProgressProps) {
   if (total === 0) return null
 
   return (
-    <div className="mt-4">
+    <div className="mt-5">
       <div
-        className="uppercase tracking-widest mb-3"
+        className="uppercase mb-3"
         style={{
-          fontSize: "9px",
-          fontFamily: "JetBrains Mono, monospace",
-          color: "#4b5563",
+          fontSize:      "11px",
+          fontFamily:    "JetBrains Mono, monospace",
           letterSpacing: "0.12em",
+          color:         "var(--text-muted)",
         }}
       >
         Phase Breakdown
       </div>
 
-      <ResponsiveContainer width="100%" height={72}>
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 0, right: 8, bottom: 0, left: 88 }}
-          barSize={16}
-          barCategoryGap="30%"
-        >
-          <XAxis type="number" domain={[0, total]} hide />
-          <YAxis
-            type="category"
-            dataKey="phase"
-            tick={{
-              fontSize: 10,
-              fontFamily: "JetBrains Mono, monospace",
-              fill: "#4b5563",
-            }}
-            width={80}
-            axisLine={false}
-            tickLine={false}
-          />
-          <ReTooltip
-            cursor={false}
-            contentStyle={{
-              background: "#0d1623",
-              border: "1px solid #1f2937",
-              borderRadius: 4,
-              fontSize: 11,
-              fontFamily: "JetBrains Mono, monospace",
-              color: "#e2e8f0",
-            }}
-            formatter={(value: number, name: string) => [
-              `${value} / ${total}`,
-              STATUS_LABEL[name as keyof typeof STATUS_LABEL] ?? name,
-            ]}
-          />
-          {STACK_ORDER.map((status) => (
-            <Bar
-              key={status}
-              dataKey={status}
-              stackId="phases"
-              fill={PHASE_COLOURS[status]}
-              isAnimationActive={false}
-              radius={status === STATUS.COMPLETE ? [0, 2, 2, 0] : 0}
+      {/* Chart area with inset background */}
+      <div
+        className="rounded-md overflow-hidden"
+        style={{ background: "var(--bg-inset)", padding: "8px 4px 4px" }}
+      >
+        <ResponsiveContainer width="100%" height={72}>
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ top: 0, right: 8, bottom: 0, left: 88 }}
+            barSize={16}
+            barCategoryGap="30%"
+          >
+            <XAxis type="number" domain={[0, total]} hide />
+            <YAxis
+              type="category"
+              dataKey="phase"
+              tick={{
+                fontSize:   11,
+                fontFamily: "JetBrains Mono, monospace",
+                fill:       "#8fa3be",  // --text-secondary
+              }}
+              width={80}
+              axisLine={false}
+              tickLine={false}
             />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
+            <ReTooltip
+              cursor={false}
+              contentStyle={{
+                background:   "#1a2236",
+                border:       "1px solid #2d3f5c",
+                borderRadius: 4,
+                fontSize:     11,
+                fontFamily:   "JetBrains Mono, monospace",
+                color:        "#e8edf5",
+              }}
+              formatter={(value: number, name: string) => [
+                `${value} / ${total}`,
+                STATUS_LABEL[name as keyof typeof STATUS_LABEL] ?? name,
+              ]}
+            />
+            {STACK_ORDER.map((status) => (
+              <Bar
+                key={status}
+                dataKey={status}
+                stackId="phases"
+                fill={PHASE_COLOURS_HEX[status]}
+                isAnimationActive={false}
+                radius={status === STATUS.COMPLETE ? [0, 2, 2, 0] : 0}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
-      {/* Inline legend */}
-      <div className="flex gap-4 mt-2">
+      {/* Legend */}
+      <div className="flex gap-5 mt-2">
         {STACK_ORDER.slice().reverse().map((s) => (
           <div key={s} className="flex items-center gap-1.5">
             <span
               className="inline-block h-2 w-2 rounded-sm"
-              style={{ background: PHASE_COLOURS[s] }}
+              style={{ background: PHASE_COLOURS_HEX[s] }}
             />
-            <span
-              style={{
-                fontSize: "10px",
-                fontFamily: "JetBrains Mono, monospace",
-                color: "#4b5563",
-              }}
-            >
+            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
               {STATUS_LABEL[s]}
             </span>
           </div>

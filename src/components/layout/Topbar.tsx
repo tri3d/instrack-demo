@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { trackSections } from "@/data/route"
-import { STATUS, STATUS_COLOUR, STATUS_LABEL, deriveOverallStatus, ALL_STATUSES } from "@/lib/status"
+import { STATUS, STATUS_COLOUR, STATUS_BG, STATUS_LABEL, deriveOverallStatus, ALL_STATUSES } from "@/lib/status"
 import type { Status } from "@/lib/status"
 
 const LAST_UPDATED = new Date().toLocaleDateString("en-GB", {
@@ -14,14 +14,10 @@ const LAST_UPDATED = new Date().toLocaleDateString("en-GB", {
 
 function statusCounts(): Record<Status, number> {
   const counts: Record<Status, number> = {
-    NOT_STARTED: 0,
-    IN_PROGRESS: 0,
-    COMPLETE:    0,
-    BLOCKED:     0,
+    NOT_STARTED: 0, IN_PROGRESS: 0, COMPLETE: 0, BLOCKED: 0,
   }
   for (const s of trackSections) {
-    const overall = deriveOverallStatus(s.installation, s.commissioning, s.handover)
-    counts[overall]++
+    counts[deriveOverallStatus(s.installation, s.commissioning, s.handover)]++
   }
   return counts
 }
@@ -31,47 +27,63 @@ export default function Topbar() {
 
   return (
     <header
-      className="flex h-14 items-center gap-4 border-b px-6 shrink-0"
-      style={{ background: "#080f18", borderColor: "#1f2937" }}
+      className="flex h-13 items-center gap-4 px-6 shrink-0"
+      style={{
+        height: "52px",
+        background: "var(--bg-panel)",
+        borderBottom: "1px solid var(--border-strong)",
+      }}
     >
       {/* Wordmark */}
-      <div className="flex items-center gap-0 font-mono text-lg font-semibold tracking-tight select-none">
-        <span style={{ color: "#e2e8f0" }}>ins</span>
-        <span style={{ color: "#d97706" }}>track</span>
+      <div
+        className="flex items-center select-none"
+        style={{ fontFamily: "var(--font-mono)", fontSize: "18px", fontWeight: 600, letterSpacing: "-0.02em" }}
+      >
+        <span style={{ color: "var(--text-secondary)" }}>ins</span>
+        <span style={{ color: "var(--accent)" }}>track</span>
       </div>
 
-      <Separator orientation="vertical" className="h-5 opacity-30" />
+      <Separator
+        orientation="vertical"
+        className="h-5"
+        style={{ background: "var(--border-strong)" }}
+      />
 
       {/* Project name */}
       <div
-        className="flex-1 text-center text-sm font-semibold tracking-widest uppercase"
-        style={{ fontFamily: "var(--font-display)", color: "#94a3b8", letterSpacing: "0.15em" }}
+        className="flex-1 text-center uppercase"
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "13px",
+          fontWeight: 600,
+          letterSpacing: "0.15em",
+          color: "var(--text-secondary)",
+        }}
       >
         Millfield — Apex Terminal Line
       </div>
 
       {/* Status legend */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         {ALL_STATUSES.map((status) => (
-          <div key={status} className="flex items-center gap-1.5">
+          <div key={status} className="flex items-center gap-2">
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ background: STATUS_COLOUR[status] }}
             />
-            <span
-              className="text-xs font-mono"
-              style={{ color: "#64748b" }}
-            >
+            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
               {STATUS_LABEL[status]}
             </span>
             {counts[status] > 0 && (
               <Badge
                 variant="outline"
-                className="h-4 px-1 text-[10px] font-mono"
+                className="h-4 px-1.5"
                 style={{
-                  borderColor: STATUS_COLOUR[status],
+                  fontSize: "10px",
+                  fontFamily: "var(--font-mono)",
+                  borderColor: STATUS_COLOUR[status] + "60",
                   color: STATUS_COLOUR[status],
-                  background: "transparent",
+                  background: STATUS_BG[status],
                 }}
               >
                 {counts[status]}
@@ -81,10 +93,14 @@ export default function Topbar() {
         ))}
       </div>
 
-      <Separator orientation="vertical" className="h-5 opacity-30" />
+      <Separator
+        orientation="vertical"
+        className="h-5"
+        style={{ background: "var(--border-strong)" }}
+      />
 
       {/* Timestamp */}
-      <div className="text-[11px] font-mono whitespace-nowrap" style={{ color: "#475569" }}>
+      <div style={{ fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
         Updated {LAST_UPDATED}
       </div>
     </header>
