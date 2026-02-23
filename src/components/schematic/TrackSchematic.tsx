@@ -190,7 +190,7 @@ export default function TrackSchematic({
         onEdgeMouseEnter={handleEdgeMouseEnter}
         onEdgeMouseLeave={handleEdgeMouseLeave}
         fitView
-        fitViewOptions={{ padding: 0.25 }}
+        fitViewOptions={{ padding: 0.35 }}
         nodesDraggable={false}
         nodesConnectable={false}
         panOnScroll

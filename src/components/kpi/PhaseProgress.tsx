@@ -84,6 +84,7 @@ export default function PhaseProgress({ sections }: PhaseProgressProps) {
       >
         <ResponsiveContainer width="100%" height={72}>
           <BarChart
+            key={sections.map((s) => s.id).join(",")}
             data={data}
             layout="vertical"
             margin={{ top: 0, right: 8, bottom: 0, left: 88 }}
@@ -124,7 +125,9 @@ export default function PhaseProgress({ sections }: PhaseProgressProps) {
                 dataKey={status}
                 stackId="phases"
                 fill={PHASE_COLOURS_HEX[status]}
-                isAnimationActive={false}
+                isAnimationActive={true}
+                animationDuration={600}
+                animationEasing="ease-out"
                 radius={
                 status === STATUS.COMPLETE    ? [2, 0, 0, 2] :
                 status === STATUS.NOT_STARTED ? [0, 2, 2, 0] : 0

@@ -14,8 +14,9 @@ import { PROJECT_START, PROJECT_END } from "@/data/route"
 import type { TrackSection, PhaseSchedule } from "@/types"
 
 interface SchedulePanelProps {
-  section: TrackSection
-  onClose: () => void
+  section:    TrackSection
+  onClose:    () => void
+  onNavigate: (direction: "prev" | "next") => void
 }
 
 // ─── Date helpers ──────────────────────────────────────────────────────────
@@ -48,11 +49,11 @@ function buildGanttData(label: string, sched: PhaseSchedule, colour: string) {
 
   return {
     phase: label,
-    plannedGap:    plannedStart,
+    plannedGap:   plannedStart,
     plannedWidth,
-    actualGap:     actualStart ?? 0,  // null → 0 so Recharts never skips the row
-    actualWidth:   actualWidth ?? 0,
-    hasActual:     as_ !== null,
+    actualGap:    actualStart ?? 0,
+    actualWidth:  actualWidth ?? 0,
+    hasActual:    as_ !== null,
     isOverdue,
     colour,
     tooltip: {
@@ -76,13 +77,10 @@ const YEAR_TICKS = new Set<number>()
   const end   = new Date(PROJECT_END)
   let d = new Date(start.getFullYear(), start.getMonth(), 1)
   while (d <= end) {
-    const tick = ((d.getTime() - projectStart) / projectSpan) * 100
+    const tick    = ((d.getTime() - projectStart) / projectSpan) * 100
     const rounded = Math.round(tick * 10) / 10
     MONTH_LABELS[rounded] = d.toLocaleDateString("en-GB", { month: "short", year: "2-digit" })
-    // Year boundary: any January that isn't tick≈0 (start of project)
-    if (d.getMonth() === 0 && rounded > 1) {
-      YEAR_TICKS.add(rounded)
-    }
+    if (d.getMonth() === 0 && rounded > 1) YEAR_TICKS.add(rounded)
     d = new Date(d.getFullYear(), d.getMonth() + 1, 1)
   }
 })()
@@ -94,8 +92,7 @@ function xAxisTick(value: number): string {
 }
 
 function tickToYear(tick: number): string {
-  const ms = (tick / 100) * projectSpan + projectStart
-  return String(new Date(ms).getFullYear())
+  return String(new Date((tick / 100) * projectSpan + projectStart).getFullYear())
 }
 
 // ─── Custom tooltip ────────────────────────────────────────────────────────
@@ -132,6 +129,17 @@ function GanttTooltip({ active, payload }: { active?: boolean; payload?: unknown
   )
 }
 
+// ─── Milestone helper ──────────────────────────────────────────────────────
+
+function getNextMilestone(section: TrackSection) {
+  const phases = [
+    { name: "Installation",  status: section.installation,  plannedEnd: section.schedule.installation.plannedEnd  },
+    { name: "Commissioning", status: section.commissioning, plannedEnd: section.schedule.commissioning.plannedEnd },
+    { name: "Handover",      status: section.handover,      plannedEnd: section.schedule.handover.plannedEnd      },
+  ]
+  return phases.find((p) => p.status === STATUS.NOT_STARTED || p.status === STATUS.IN_PROGRESS) ?? null
+}
+
 // ─── Completion forecast ───────────────────────────────────────────────────
 
 function computeForecast(section: TrackSection) {
@@ -151,14 +159,11 @@ function computeForecast(section: TrackSection) {
     const as_ = phase.actualStart ? new Date(phase.actualStart).getTime() : null
 
     if (ae !== null) {
-      // Phase complete — use whichever is later
       latestMs = Math.max(latestMs, Math.max(pe, ae))
     } else if (as_ !== null && now > pe) {
-      // In progress but overdue — use current time as projection
       latestMs   = Math.max(latestMs, now)
       hasOverrun = true
     } else {
-      // Not started or on track — use planned end
       latestMs = Math.max(latestMs, pe)
     }
   }
@@ -173,9 +178,50 @@ function computeForecast(section: TrackSection) {
   return { dateLabel, hasOverrun, isBlocked }
 }
 
+// ─── Nav button ────────────────────────────────────────────────────────────
+
+interface NavBtnProps {
+  label:   string
+  onClick: () => void
+}
+
+function NavBtn({ label, onClick }: NavBtnProps) {
+  return (
+    <button
+      onClick={onClick}
+      className="font-mono"
+      style={{
+        fontSize:     "13px",
+        color:        "var(--text-secondary)",
+        border:       "1px solid var(--border-soft)",
+        background:   "var(--bg-inset)",
+        padding:      "2px 9px",
+        borderRadius: "4px",
+        cursor:       "pointer",
+        lineHeight:   "1.5",
+        transition:   "color 0.15s, border-color 0.15s, background 0.15s",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLButtonElement
+        el.style.color = "var(--text-primary)"
+        el.style.borderColor = "var(--border-strong)"
+        el.style.background = "var(--bg-panel)"
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLButtonElement
+        el.style.color = "var(--text-secondary)"
+        el.style.borderColor = "var(--border-soft)"
+        el.style.background = "var(--bg-inset)"
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
-export default function SchedulePanel({ section, onClose }: SchedulePanelProps) {
+export default function SchedulePanel({ section, onClose, onNavigate }: SchedulePanelProps) {
   const overall = deriveOverallStatus(section.installation, section.commissioning, section.handover)
   const colour  = STATUS_COLOUR[overall]
 
@@ -185,7 +231,8 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
     buildGanttData("Handover",      section.schedule.handover,      STATUS_COLOUR[section.handover]),
   ]
 
-  const forecast = computeForecast(section)
+  const nextMilestone = getNextMilestone(section)
+  const forecast      = computeForecast(section)
 
   return (
     <div
@@ -205,13 +252,14 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
           borderBottom: "1px solid var(--border-soft)",
         }}
       >
+        {/* Left: section info */}
         <div className="flex items-center gap-3">
           <span
             style={{
-              fontFamily: "var(--font-display)",
-              fontSize:   "15px",
-              fontWeight: 700,
-              color:      "var(--text-primary)",
+              fontFamily:    "var(--font-display)",
+              fontSize:      "15px",
+              fontWeight:    700,
+              color:         "var(--text-primary)",
               letterSpacing: "0.02em",
             }}
           >
@@ -235,28 +283,36 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
           </Badge>
         </div>
 
-        <button
-          onClick={onClose}
-          className="rounded px-3 py-1 transition-colors font-mono"
-          style={{
-            fontSize:    "11px",
-            color:       "var(--text-muted)",
-            border:      "1px solid var(--border-soft)",
-            background:  "transparent",
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            el.style.color = "var(--text-primary)"
-            el.style.borderColor = "var(--border-strong)"
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            el.style.color = "var(--text-muted)"
-            el.style.borderColor = "var(--border-soft)"
-          }}
-        >
-          ✕ Close
-        </button>
+        {/* Right: nav + close */}
+        <div className="flex items-center gap-2">
+          <NavBtn label="←" onClick={() => onNavigate("prev")} />
+          <NavBtn label="→" onClick={() => onNavigate("next")} />
+
+          <button
+            onClick={onClose}
+            className="rounded px-3 py-1 font-mono"
+            style={{
+              fontSize:    "11px",
+              color:       "var(--text-muted)",
+              border:      "1px solid var(--border-soft)",
+              background:  "transparent",
+              cursor:      "pointer",
+              transition:  "color 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLButtonElement
+              el.style.color = "var(--text-primary)"
+              el.style.borderColor = "var(--border-strong)"
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLButtonElement
+              el.style.color = "var(--text-muted)"
+              el.style.borderColor = "var(--border-soft)"
+            }}
+          >
+            ✕ Close
+          </button>
+        </div>
       </div>
 
       {/* Gantt chart area */}
@@ -265,13 +321,15 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
           className="rounded-md overflow-hidden"
           style={{ background: "var(--bg-inset)", padding: "8px 8px 8px" }}
         >
-          <ResponsiveContainer width="100%" height={160}>
+          <ResponsiveContainer width="100%" height={190}>
+            {/* key forces remount on section change, re-triggering bar entry animation */}
             <BarChart
+              key={section.id}
               data={ganttData}
               layout="vertical"
               margin={{ top: 22, right: 16, bottom: 4, left: 90 }}
               barCategoryGap="30%"
-              barSize={10}
+              barSize={14}
             >
               <XAxis
                 type="number"
@@ -332,21 +390,62 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
                 />
               )}
 
-              {/* Planned bars — var(--border-accent) hex: #334466 */}
-              <Bar dataKey="plannedGap"   stackId="planned" fill="transparent" />
-              <Bar dataKey="plannedWidth" stackId="planned" radius={[2, 2, 2, 2]}>
+              {/* Planned bars */}
+              <Bar dataKey="plannedGap"   stackId="planned" fill="transparent" isAnimationActive={false} />
+              <Bar
+                dataKey="plannedWidth"
+                stackId="planned"
+                radius={[2, 2, 2, 2]}
+                isAnimationActive={true}
+                animationDuration={500}
+                animationEasing="ease-out"
+                animationBegin={0}
+              >
                 {ganttData.map((_, i) => <Cell key={i} fill="#334466" />)}
               </Bar>
 
-              {/* Actual bars — status colour */}
-              <Bar dataKey="actualGap"   stackId="actual" fill="transparent" />
-              <Bar dataKey="actualWidth" stackId="actual" radius={[2, 2, 2, 2]}>
+              {/* Actual bars — staggered 150ms per row via animationBegin on each entry */}
+              <Bar dataKey="actualGap"   stackId="actual" fill="transparent" isAnimationActive={false} />
+              <Bar
+                dataKey="actualWidth"
+                stackId="actual"
+                radius={[2, 2, 2, 2]}
+                isAnimationActive={true}
+                animationDuration={500}
+                animationEasing="ease-out"
+                animationBegin={150}
+              >
                 {ganttData.map((entry, i) => (
                   <Cell key={i} fill={entry.hasActual ? entry.colour : "transparent"} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Next milestone callout */}
+        <div
+          className="mt-3 font-mono"
+          style={{
+            background:   "var(--bg-inset)",
+            borderLeft:   "3px solid var(--accent)",
+            borderRadius: "4px",
+            padding:      "8px 12px",
+            fontSize:     "11px",
+            color:        "var(--text-secondary)",
+          }}
+        >
+          {nextMilestone ? (
+            <>
+              <span style={{ color: "var(--accent)" }}>▶</span>
+              {" Next milestone: "}
+              <strong style={{ color: "var(--text-primary)" }}>{nextMilestone.name}</strong>
+              {" · due "}
+              <span style={{ color: "var(--text-primary)" }}>{nextMilestone.plannedEnd}</span>
+            </>
+          ) : (
+            <span style={{ color: STATUS_COLOUR.COMPLETE }}>✓ All phases complete</span>
+          )}
         </div>
 
         {/* Projected completion */}

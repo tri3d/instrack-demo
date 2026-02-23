@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { trackSections } from "@/data/route"
@@ -24,14 +25,20 @@ function statusCounts(): Record<Status, number> {
 
 export default function Topbar() {
   const counts = statusCounts()
+  const [exportHint, setExportHint] = useState(false)
+
+  const handleExport = () => {
+    setExportHint(true)
+    setTimeout(() => setExportHint(false), 2000)
+  }
 
   return (
     <header
       className="flex h-13 items-center gap-4 px-6 shrink-0"
       style={{
-        height: "52px",
-        background: "var(--bg-panel)",
-        border: "1px solid var(--border-strong)",
+        height:       "52px",
+        background:   "var(--bg-panel)",
+        border:       "1px solid var(--border-strong)",
         borderRadius: "8px",
       }}
     >
@@ -54,11 +61,11 @@ export default function Topbar() {
       <div
         className="flex-1 text-center uppercase"
         style={{
-          fontFamily: "var(--font-display)",
-          fontSize: "13px",
-          fontWeight: 600,
+          fontFamily:    "var(--font-display)",
+          fontSize:      "13px",
+          fontWeight:    600,
           letterSpacing: "0.15em",
-          color: "var(--text-secondary)",
+          color:         "var(--text-secondary)",
         }}
       >
         Millfield — Apex Terminal Line
@@ -80,11 +87,11 @@ export default function Topbar() {
                 variant="outline"
                 className="h-4 px-1.5"
                 style={{
-                  fontSize: "10px",
-                  fontFamily: "var(--font-mono)",
+                  fontSize:    "10px",
+                  fontFamily:  "var(--font-mono)",
                   borderColor: STATUS_COLOUR[status] + "60",
-                  color: STATUS_COLOUR[status],
-                  background: STATUS_BG[status],
+                  color:       STATUS_COLOUR[status],
+                  background:  STATUS_BG[status],
                 }}
               >
                 {counts[status]}
@@ -92,6 +99,64 @@ export default function Topbar() {
             )}
           </div>
         ))}
+      </div>
+
+      <Separator
+        orientation="vertical"
+        className="h-5"
+        style={{ background: "var(--border-strong)" }}
+      />
+
+      {/* Export button */}
+      <div style={{ position: "relative" }}>
+        <button
+          onClick={handleExport}
+          className="font-mono"
+          style={{
+            fontSize:     "11px",
+            color:        "var(--text-secondary)",
+            border:       "1px solid var(--border-strong)",
+            background:   "transparent",
+            padding:      "3px 10px",
+            borderRadius: "4px",
+            cursor:       "pointer",
+            transition:   "color 0.15s, border-color 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.color = "var(--text-primary)"
+            el.style.borderColor = "var(--border-accent)"
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.color = "var(--text-secondary)"
+            el.style.borderColor = "var(--border-strong)"
+          }}
+        >
+          ↓ Export
+        </button>
+
+        {exportHint && (
+          <div
+            className="animate-in fade-in duration-150 font-mono"
+            style={{
+              position:    "absolute",
+              top:         "-32px",
+              left:        "50%",
+              transform:   "translateX(-50%)",
+              background:  "var(--bg-card)",
+              border:      "1px solid var(--border-strong)",
+              borderRadius:"4px",
+              padding:     "4px 10px",
+              fontSize:    "11px",
+              color:       "var(--text-secondary)",
+              whiteSpace:  "nowrap",
+              zIndex:      50,
+            }}
+          >
+            Export coming soon
+          </div>
+        )}
       </div>
 
       <Separator

@@ -20,21 +20,24 @@ function countByStatus(sections: TrackSection[]) {
 }
 
 interface StatCardProps {
-  label: string
-  value: number | string
-  colour: string
-  sub?: string
+  label:        string
+  value:        number | string
+  colour:       string
+  micro?:       string
+  microColour?: string
+  changeKey?:   string
 }
 
-function StatCard({ label, value, colour, sub }: StatCardProps) {
+function StatCard({ label, value, colour, micro, microColour, changeKey }: StatCardProps) {
   return (
     <div
-      className="rounded-lg overflow-hidden transition-colors"
+      className="rounded-lg overflow-hidden"
       style={{
         background:   "var(--bg-inset)",
         border:       "1px solid var(--border-soft)",
         borderBottom: `3px solid ${colour}`,
         boxShadow:    "0 2px 8px rgba(0,0,0,0.4)",
+        transition:   "background 0.15s, border-color 0.15s",
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement
@@ -61,7 +64,11 @@ function StatCard({ label, value, colour, sub }: StatCardProps) {
         >
           {label}
         </div>
+
+        {/* Value — remounts on changeKey to trigger fade-in */}
         <div
+          key={changeKey}
+          className="animate-in fade-in duration-200"
           style={{
             fontSize:   "30px",
             fontFamily: "Barlow Condensed, var(--font-display), sans-serif",
@@ -72,16 +79,17 @@ function StatCard({ label, value, colour, sub }: StatCardProps) {
         >
           {value}
         </div>
-        {sub && (
+
+        {micro && (
           <div
             className="mt-1"
             style={{
               fontSize:   "10px",
               fontFamily: "JetBrains Mono, monospace",
-              color:      "var(--text-muted)",
+              color:      microColour ?? "var(--text-muted)",
             }}
           >
-            {sub}
+            {micro}
           </div>
         )}
       </div>
@@ -97,13 +105,11 @@ export default function KpiBar({ selectedSection }: KpiBarProps) {
 
   const pct = total === 0 ? 0 : Math.round((complete / total) * 100)
 
-  // For filtered view: how many of the 3 phases are complete
   const phasesComplete = isFiltered
     ? [selectedSection.installation, selectedSection.commissioning, selectedSection.handover]
         .filter((p) => p === STATUS.COMPLETE).length
     : 0
 
-  // Derive the selected section's overall status for the highlight strip
   const selectedStatus = isFiltered
     ? deriveOverallStatus(
         selectedSection.installation,
@@ -111,6 +117,9 @@ export default function KpiBar({ selectedSection }: KpiBarProps) {
         selectedSection.handover,
       )
     : null
+
+  // Key that changes whenever selection changes — drives value fade-in
+  const changeKey = selectedSection?.id ?? "all"
 
   return (
     <div
@@ -165,32 +174,44 @@ export default function KpiBar({ selectedSection }: KpiBarProps) {
               label={isFiltered ? "Section" : "Total Sections"}
               value={total}
               colour="var(--text-primary)"
+              micro="across this route"
+              changeKey={changeKey}
             />
             <StatCard
               label="Complete"
               value={complete}
               colour={STATUS_COLOUR.COMPLETE}
-              sub={!isFiltered ? `${pct}% of total` : undefined}
+              micro={`all 3 phases done${!isFiltered ? ` · ${pct}%` : ""}`}
+              changeKey={changeKey}
             />
             <StatCard
               label="In Progress"
               value={inProgress}
               colour={STATUS_COLOUR.IN_PROGRESS}
+              micro="actively under way"
+              changeKey={changeKey}
             />
             <StatCard
               label="Blocked"
               value={blocked}
               colour={STATUS_COLOUR.BLOCKED}
+              micro="requires intervention"
+              microColour={blocked > 0 ? "var(--status-blocked)" : undefined}
+              changeKey={changeKey}
             />
             <StatCard
               label="Not Started"
               value={notStarted}
               colour={STATUS_COLOUR.NOT_STARTED}
+              micro="not yet mobilised"
+              changeKey={changeKey}
             />
             <StatCard
               label={isFiltered ? "Phases Done" : "% Complete"}
               value={isFiltered ? `${phasesComplete}/3` : `${pct}%`}
               colour={STATUS_COLOUR.COMPLETE}
+              micro={isFiltered ? "of 3 required phases" : `${pct}% of total`}
+              changeKey={changeKey}
             />
           </div>
         </div>
