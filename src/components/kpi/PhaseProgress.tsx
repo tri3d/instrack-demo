@@ -3,12 +3,19 @@ import {
   Bar,
   XAxis,
   YAxis,
-  Cell,
   Tooltip as ReTooltip,
   ResponsiveContainer,
 } from "recharts"
-import { STATUS, STATUS_COLOUR, STATUS_LABEL } from "@/lib/status"
+import { STATUS, STATUS_LABEL } from "@/lib/status"
 import type { TrackSection } from "@/types"
+
+// Phase breakdown colours per spec
+const PHASE_COLOURS = {
+  [STATUS.COMPLETE]:    "#059669",
+  [STATUS.IN_PROGRESS]: "#d97706",
+  [STATUS.BLOCKED]:     "#dc2626",
+  [STATUS.NOT_STARTED]: "#374151",
+} as const
 
 interface PhaseProgressProps {
   sections: TrackSection[]
@@ -22,20 +29,18 @@ const PHASES = [
 
 type PhaseKey = (typeof PHASES)[number]["key"]
 
-const STATUS_STACK_ORDER = [
-  STATUS.COMPLETE,
-  STATUS.IN_PROGRESS,
-  STATUS.BLOCKED,
+// Stack order — render NOT_STARTED first (back) so status colours sit on top
+const STACK_ORDER = [
   STATUS.NOT_STARTED,
+  STATUS.BLOCKED,
+  STATUS.IN_PROGRESS,
+  STATUS.COMPLETE,
 ] as const
 
 function buildChartData(sections: TrackSection[]) {
   return PHASES.map(({ key, label }) => {
     const counts: Record<string, number> = {
-      COMPLETE: 0,
-      IN_PROGRESS: 0,
-      BLOCKED: 0,
-      NOT_STARTED: 0,
+      COMPLETE: 0, IN_PROGRESS: 0, BLOCKED: 0, NOT_STARTED: 0,
     }
     for (const s of sections) {
       counts[s[key as PhaseKey]]++
@@ -45,40 +50,43 @@ function buildChartData(sections: TrackSection[]) {
 }
 
 export default function PhaseProgress({ sections }: PhaseProgressProps) {
-  const data = buildChartData(sections)
+  const data  = buildChartData(sections)
   const total = sections.length
 
   if (total === 0) return null
 
   return (
-    <div className="mt-3 px-1">
+    <div className="mt-4">
       <div
-        className="text-[11px] font-mono mb-2 uppercase tracking-wider"
-        style={{ color: "#475569" }}
+        className="uppercase tracking-widest mb-3"
+        style={{
+          fontSize: "9px",
+          fontFamily: "JetBrains Mono, monospace",
+          color: "#4b5563",
+          letterSpacing: "0.12em",
+        }}
       >
         Phase Breakdown
       </div>
-      <ResponsiveContainer width="100%" height={80}>
+
+      <ResponsiveContainer width="100%" height={72}>
         <BarChart
           data={data}
           layout="vertical"
-          margin={{ top: 0, right: 60, bottom: 0, left: 80 }}
-          barSize={10}
+          margin={{ top: 0, right: 8, bottom: 0, left: 88 }}
+          barSize={16}
+          barCategoryGap="30%"
         >
-          <XAxis
-            type="number"
-            domain={[0, total]}
-            hide
-          />
+          <XAxis type="number" domain={[0, total]} hide />
           <YAxis
             type="category"
             dataKey="phase"
             tick={{
               fontSize: 10,
               fontFamily: "JetBrains Mono, monospace",
-              fill: "#64748b",
+              fill: "#4b5563",
             }}
-            width={72}
+            width={80}
             axisLine={false}
             tickLine={false}
           />
@@ -97,31 +105,34 @@ export default function PhaseProgress({ sections }: PhaseProgressProps) {
               STATUS_LABEL[name as keyof typeof STATUS_LABEL] ?? name,
             ]}
           />
-          {STATUS_STACK_ORDER.map((status) => (
+          {STACK_ORDER.map((status) => (
             <Bar
               key={status}
               dataKey={status}
-              stackId="a"
-              fill={STATUS_COLOUR[status]}
-              radius={0}
-            >
-              {data.map((_, index) => (
-                <Cell key={index} fill={STATUS_COLOUR[status]} />
-              ))}
-            </Bar>
+              stackId="phases"
+              fill={PHASE_COLOURS[status]}
+              isAnimationActive={false}
+              radius={status === STATUS.COMPLETE ? [0, 2, 2, 0] : 0}
+            />
           ))}
         </BarChart>
       </ResponsiveContainer>
 
-      {/* Legend */}
-      <div className="flex gap-4 mt-1 justify-end">
-        {STATUS_STACK_ORDER.map((s) => (
-          <div key={s} className="flex items-center gap-1">
+      {/* Inline legend */}
+      <div className="flex gap-4 mt-2">
+        {STACK_ORDER.slice().reverse().map((s) => (
+          <div key={s} className="flex items-center gap-1.5">
             <span
               className="inline-block h-2 w-2 rounded-sm"
-              style={{ background: STATUS_COLOUR[s] }}
+              style={{ background: PHASE_COLOURS[s] }}
             />
-            <span className="text-[10px] font-mono" style={{ color: "#475569" }}>
+            <span
+              style={{
+                fontSize: "10px",
+                fontFamily: "JetBrains Mono, monospace",
+                color: "#4b5563",
+              }}
+            >
               {STATUS_LABEL[s]}
             </span>
           </div>

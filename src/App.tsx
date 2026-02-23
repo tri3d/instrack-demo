@@ -15,23 +15,43 @@ export default function App() {
         className="flex flex-col h-screen overflow-hidden"
         style={{ background: "#060d14", fontFamily: "var(--font-mono)" }}
       >
+        {/* Topbar — ~52px */}
         <Topbar />
 
-        {/* Schematic — grows to fill available space */}
+        {/* Track schematic — fixed 280px */}
         <TrackSchematic
           selectedSectionId={selectedSection?.id ?? null}
           onSelectSection={setSelectedSection}
         />
 
-        {/* KPI bar — fixed height below schematic */}
+        {/* KPI cards + phase breakdown */}
         <KpiBar selectedSection={selectedSection} />
 
-        {/* Schedule panel — slides in when a section is selected */}
-        {selectedSection && (
+        {/* Schedule area — placeholder or Gantt panel */}
+        {selectedSection ? (
           <SchedulePanel
             section={selectedSection}
             onClose={() => setSelectedSection(null)}
           />
+        ) : (
+          <div
+            className="shrink-0 flex items-center justify-center border-t"
+            style={{
+              height: "64px",
+              background: "#080f18",
+              borderColor: "#1f2937",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "11px",
+                fontFamily: "JetBrains Mono, monospace",
+                color: "#2d3f52",
+              }}
+            >
+              ↑ Click a track section to view its schedule
+            </span>
+          </div>
         )}
       </div>
     </TooltipProvider>

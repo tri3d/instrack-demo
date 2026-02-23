@@ -9,6 +9,7 @@ import {
   type Edge,
   type NodeTypes,
   type EdgeTypes,
+  type EdgeMouseHandler,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 
@@ -20,16 +21,16 @@ import type { TrackSection } from "@/types"
 
 // ─── Layout constants ──────────────────────────────────────────────────────
 
-const KM_SCALE    = 90  // px per km
-const TRACK_Y     = 140 // Y position of the track line
-const LOGISTICS_Y = 30  // Y position of logistics nodes
-const LOGISTICS_CONNECTOR_H = TRACK_Y - LOGISTICS_Y - 36 // approx connector length
+const KM_SCALE    = 90   // px per km
+const TRACK_Y     = 120  // Y for station nodes inside the 280px canvas
+const LOGISTICS_Y = 20   // Y for logistics nodes (above the track)
+const LOGISTICS_CONNECTOR_H = TRACK_Y - LOGISTICS_Y - 32
 
-// ─── Node / edge type registration ────────────────────────────────────────
+// ─── Node / edge type maps — defined outside component to avoid remounting ──
 
 const nodeTypes: NodeTypes = {
-  stationNode:    StationNode,
-  logisticsNode:  LogisticsNode,
+  stationNode:   StationNode,
+  logisticsNode: LogisticsNode,
 }
 
 const edgeTypes: EdgeTypes = {
@@ -54,13 +55,13 @@ export default function TrackSchematic({
   onSelectSection,
 }: TrackSchematicProps) {
 
-  const handleEdgeSelect = useCallback(
-    (edgeId: string) => {
-      if (edgeId === selectedSectionId) {
+  const handleEdgeClick: EdgeMouseHandler = useCallback(
+    (_, edge) => {
+      if (edge.id === selectedSectionId) {
         onSelectSection(null)
         return
       }
-      const section = trackSections.find((s) => s.id === edgeId) ?? null
+      const section = trackSections.find((s) => s.id === edge.id) ?? null
       onSelectSection(section)
     },
     [selectedSectionId, onSelectSection],
@@ -68,18 +69,18 @@ export default function TrackSchematic({
 
   const nodes = useMemo<Node[]>(() => {
     const stationNodes: Node<StationNodeData>[] = routeNodes.map((n) => ({
-      id:       n.id,
-      type:     "stationNode",
-      position: { x: kmToX(n.km), y: TRACK_Y },
-      data:     n,
+      id:        n.id,
+      type:      "stationNode",
+      position:  { x: kmToX(n.km), y: TRACK_Y },
+      data:      n,
       draggable: false,
     }))
 
     const logNodes: Node<LogisticsNodeData>[] = logisticsPoints.map((lp) => ({
-      id:       lp.id,
-      type:     "logisticsNode",
-      position: { x: kmToX(lp.km) - 50, y: LOGISTICS_Y },
-      data:     { ...lp, trackY: LOGISTICS_CONNECTOR_H },
+      id:        lp.id,
+      type:      "logisticsNode",
+      position:  { x: kmToX(lp.km) - 50, y: LOGISTICS_Y },
+      data:      { ...lp, trackY: LOGISTICS_CONNECTOR_H },
       draggable: false,
     }))
 
@@ -94,24 +95,26 @@ export default function TrackSchematic({
       type:   "trackEdge",
       data:   {
         ...s,
-        onSelect: handleEdgeSelect,
+        isSelected: s.id === selectedSectionId,
       } satisfies TrackEdgeData,
-      selected: s.id === selectedSectionId,
     }))
-  }, [selectedSectionId, handleEdgeSelect])
+  }, [selectedSectionId])
 
   return (
-    <div className="w-full flex-1 min-h-0" style={{ background: "#060d14" }}>
+    <div
+      className="w-full shrink-0 border-y"
+      style={{ height: "280px", background: "#060d14", borderColor: "#1f2937" }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        onEdgeClick={handleEdgeClick}
         fitView
-        fitViewOptions={{ padding: 0.3 }}
+        fitViewOptions={{ padding: 0.25 }}
         nodesDraggable={false}
         nodesConnectable={false}
-        elementsSelectable={false}
         panOnScroll
         zoomOnScroll={false}
         style={{ background: "#060d14" }}
@@ -120,20 +123,14 @@ export default function TrackSchematic({
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1}
-          color="#1f2937"
+          color="#1a2535"
         />
         <Controls
-          style={{
-            background: "#0d1623",
-            border: "1px solid #1f2937",
-          }}
+          style={{ background: "#0d1623", border: "1px solid #1f2937" }}
         />
         <MiniMap
           position="bottom-right"
-          style={{
-            background: "#080f18",
-            border: "1px solid #1f2937",
-          }}
+          style={{ background: "#080f18", border: "1px solid #1f2937" }}
           nodeColor="#1f2937"
           maskColor="#060d1490"
         />
