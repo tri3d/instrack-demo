@@ -12,13 +12,20 @@ export default function App() {
   return (
     <TooltipProvider delayDuration={300}>
       <div
-        className="flex flex-col h-screen overflow-hidden"
-        style={{ background: "var(--bg-base)", fontFamily: "var(--font-mono)" }}
+        style={{
+          minHeight: "100vh",
+          background: "var(--bg-base)",
+          fontFamily: "var(--font-mono)",
+          display: "flex",
+          flexDirection: "column",
+          padding: "20px",
+          gap: "20px",
+        }}
       >
         {/* Topbar */}
         <Topbar />
 
-        {/* Track schematic — fixed 280px */}
+        {/* Track schematic */}
         <TrackSchematic
           selectedSectionId={selectedSection?.id ?? null}
           onSelectSection={setSelectedSection}
@@ -35,11 +42,14 @@ export default function App() {
           />
         ) : (
           <div
-            className="shrink-0 flex items-center justify-center"
             style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               height: "56px",
               background: "var(--bg-card)",
-              borderTop: "1px solid var(--border-strong)",
+              border: "1px solid var(--border-strong)",
+              borderRadius: "8px",
             }}
           >
             <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>

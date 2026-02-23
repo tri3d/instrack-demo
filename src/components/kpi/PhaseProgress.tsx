@@ -37,12 +37,12 @@ const PHASES = [
 
 type PhaseKey = (typeof PHASES)[number]["key"]
 
-// Stack order: NOT_STARTED at back so status colours always visible on top
+// Stack order left→right: Complete → In Progress → Blocked → Not Started
 const STACK_ORDER = [
-  STATUS.NOT_STARTED,
-  STATUS.BLOCKED,
-  STATUS.IN_PROGRESS,
   STATUS.COMPLETE,
+  STATUS.IN_PROGRESS,
+  STATUS.BLOCKED,
+  STATUS.NOT_STARTED,
 ] as const
 
 function buildChartData(sections: TrackSection[]) {
@@ -64,7 +64,7 @@ export default function PhaseProgress({ sections }: PhaseProgressProps) {
   if (total === 0) return null
 
   return (
-    <div className="mt-5">
+    <div>
       <div
         className="uppercase mb-3"
         style={{
@@ -125,7 +125,10 @@ export default function PhaseProgress({ sections }: PhaseProgressProps) {
                 stackId="phases"
                 fill={PHASE_COLOURS_HEX[status]}
                 isAnimationActive={false}
-                radius={status === STATUS.COMPLETE ? [0, 2, 2, 0] : 0}
+                radius={
+                status === STATUS.COMPLETE    ? [2, 0, 0, 2] :
+                status === STATUS.NOT_STARTED ? [0, 2, 2, 0] : 0
+              }
               />
             ))}
           </BarChart>
@@ -134,7 +137,7 @@ export default function PhaseProgress({ sections }: PhaseProgressProps) {
 
       {/* Legend */}
       <div className="flex gap-5 mt-2">
-        {STACK_ORDER.slice().reverse().map((s) => (
+        {STACK_ORDER.map((s) => (
           <div key={s} className="flex items-center gap-1.5">
             <span
               className="inline-block h-2 w-2 rounded-sm"

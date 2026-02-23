@@ -31,7 +31,8 @@ export default function Topbar() {
       style={{
         height: "52px",
         background: "var(--bg-panel)",
-        borderBottom: "1px solid var(--border-strong)",
+        border: "1px solid var(--border-strong)",
+        borderRadius: "8px",
       }}
     >
       {/* Wordmark */}

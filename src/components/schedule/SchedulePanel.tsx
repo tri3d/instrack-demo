@@ -9,7 +9,7 @@ import {
   Tooltip as ReTooltip,
 } from "recharts"
 import { Badge } from "@/components/ui/badge"
-import { deriveOverallStatus, STATUS_COLOUR, STATUS_BG, STATUS_LABEL } from "@/lib/status"
+import { deriveOverallStatus, STATUS, STATUS_COLOUR, STATUS_BG, STATUS_LABEL } from "@/lib/status"
 import { PROJECT_START, PROJECT_END } from "@/data/route"
 import type { TrackSection, PhaseSchedule } from "@/types"
 
@@ -50,7 +50,7 @@ function buildGanttData(label: string, sched: PhaseSchedule, colour: string) {
     phase: label,
     plannedGap:    plannedStart,
     plannedWidth,
-    actualGap:     actualStart,
+    actualGap:     actualStart ?? 0,  // null → 0 so Recharts never skips the row
     actualWidth:   actualWidth ?? 0,
     hasActual:     as_ !== null,
     isOverdue,
@@ -65,6 +65,38 @@ function buildGanttData(label: string, sched: PhaseSchedule, colour: string) {
 }
 
 const TODAY_TICK = msToTick(Date.now())
+
+// ─── Month / year tick data ────────────────────────────────────────────────
+
+const MONTH_LABELS: Record<number, string> = {}
+const YEAR_TICKS = new Set<number>()
+
+;(() => {
+  const start = new Date(PROJECT_START)
+  const end   = new Date(PROJECT_END)
+  let d = new Date(start.getFullYear(), start.getMonth(), 1)
+  while (d <= end) {
+    const tick = ((d.getTime() - projectStart) / projectSpan) * 100
+    const rounded = Math.round(tick * 10) / 10
+    MONTH_LABELS[rounded] = d.toLocaleDateString("en-GB", { month: "short", year: "2-digit" })
+    // Year boundary: any January that isn't tick≈0 (start of project)
+    if (d.getMonth() === 0 && rounded > 1) {
+      YEAR_TICKS.add(rounded)
+    }
+    d = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+  }
+})()
+
+const MONTH_TICKS = Object.keys(MONTH_LABELS).map(Number).sort((a, b) => a - b)
+
+function xAxisTick(value: number): string {
+  return MONTH_LABELS[Math.round(value * 10) / 10] ?? ""
+}
+
+function tickToYear(tick: number): string {
+  const ms = (tick / 100) * projectSpan + projectStart
+  return String(new Date(ms).getFullYear())
+}
 
 // ─── Custom tooltip ────────────────────────────────────────────────────────
 
@@ -100,25 +132,46 @@ function GanttTooltip({ active, payload }: { active?: boolean; payload?: unknown
   )
 }
 
-// ─── Month tick labels ─────────────────────────────────────────────────────
+// ─── Completion forecast ───────────────────────────────────────────────────
 
-const MONTH_LABELS: Record<number, string> = {}
-;(() => {
-  const start = new Date(PROJECT_START)
-  const end   = new Date(PROJECT_END)
-  let d = new Date(start.getFullYear(), start.getMonth(), 1)
-  while (d <= end) {
-    const tick = ((d.getTime() - projectStart) / projectSpan) * 100
-    MONTH_LABELS[Math.round(tick * 10) / 10] = d.toLocaleDateString("en-GB", { month: "short", year: "2-digit" })
-    d = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+function computeForecast(section: TrackSection) {
+  const phases = [
+    section.schedule.installation,
+    section.schedule.commissioning,
+    section.schedule.handover,
+  ]
+
+  const now = Date.now()
+  let latestMs   = 0
+  let hasOverrun = false
+
+  for (const phase of phases) {
+    const pe  = new Date(phase.plannedEnd).getTime()
+    const ae  = phase.actualEnd   ? new Date(phase.actualEnd).getTime()   : null
+    const as_ = phase.actualStart ? new Date(phase.actualStart).getTime() : null
+
+    if (ae !== null) {
+      // Phase complete — use whichever is later
+      latestMs = Math.max(latestMs, Math.max(pe, ae))
+    } else if (as_ !== null && now > pe) {
+      // In progress but overdue — use current time as projection
+      latestMs   = Math.max(latestMs, now)
+      hasOverrun = true
+    } else {
+      // Not started or on track — use planned end
+      latestMs = Math.max(latestMs, pe)
+    }
   }
-})()
 
-function xAxisTick(value: number): string {
-  return MONTH_LABELS[Math.round(value * 10) / 10] ?? ""
+  const isBlocked = [section.installation, section.commissioning, section.handover]
+    .some((s) => s === STATUS.BLOCKED)
+
+  const dateLabel = new Date(latestMs).toLocaleDateString("en-GB", {
+    day: "numeric", month: "short", year: "numeric",
+  })
+
+  return { dateLabel, hasOverrun, isBlocked }
 }
-
-const MONTH_TICKS = Object.keys(MONTH_LABELS).map(Number)
 
 // ─── Component ─────────────────────────────────────────────────────────────
 
@@ -132,20 +185,24 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
     buildGanttData("Handover",      section.schedule.handover,      STATUS_COLOUR[section.handover]),
   ]
 
+  const forecast = computeForecast(section)
+
   return (
     <div
       className="shrink-0 animate-in slide-in-from-bottom-2 duration-200"
       style={{
-        background: "var(--bg-card)",
-        borderTop:  "1px solid var(--border-strong)",
+        background:   "var(--bg-card)",
+        border:       "1px solid var(--border-strong)",
+        borderRadius: "8px",
+        overflow:     "hidden",
       }}
     >
       {/* Header strip */}
       <div
         className="flex items-center justify-between px-6 py-3"
         style={{
-          background:    "var(--bg-inset)",
-          borderBottom:  "1px solid var(--border-soft)",
+          background:   "var(--bg-inset)",
+          borderBottom: "1px solid var(--border-soft)",
         }}
       >
         <div className="flex items-center gap-3">
@@ -203,17 +260,17 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
       </div>
 
       {/* Gantt chart area */}
-      <div className="px-6 py-4">
+      <div className="px-6 py-6">
         <div
           className="rounded-md overflow-hidden"
-          style={{ background: "var(--bg-inset)", padding: "8px 8px 4px" }}
+          style={{ background: "var(--bg-inset)", padding: "8px 8px 8px" }}
         >
-          <ResponsiveContainer width="100%" height={110}>
+          <ResponsiveContainer width="100%" height={160}>
             <BarChart
               data={ganttData}
               layout="vertical"
-              margin={{ top: 4, right: 16, bottom: 16, left: 90 }}
-              barCategoryGap={10}
+              margin={{ top: 22, right: 16, bottom: 4, left: 90 }}
+              barCategoryGap="30%"
               barSize={10}
             >
               <XAxis
@@ -221,10 +278,11 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
                 domain={[0, 100]}
                 ticks={MONTH_TICKS}
                 tickFormatter={xAxisTick}
-                tick={{ fontSize: 10, fontFamily: "JetBrains Mono, monospace", fill: "#4a6080" }}
+                tick={{ fontSize: 9, fontFamily: "JetBrains Mono, monospace", fill: "#4a6080" }}
                 axisLine={{ stroke: "#2d3f5c" }}
                 tickLine={false}
                 interval={1}
+                orientation="top"
               />
               <YAxis
                 type="category"
@@ -236,6 +294,27 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
               />
               <ReTooltip content={<GanttTooltip />} cursor={false} />
 
+              {/* Month gridlines */}
+              {MONTH_TICKS.map((tick) => {
+                const isYear = YEAR_TICKS.has(tick)
+                return (
+                  <ReferenceLine
+                    key={`grid-${tick}`}
+                    x={tick}
+                    stroke={isYear ? "#2d3f5c" : "#1e2d45"}
+                    strokeWidth={1}
+                    label={isYear ? {
+                      value:      tickToYear(tick),
+                      position:   "insideTopLeft",
+                      fontSize:   9,
+                      fontFamily: "JetBrains Mono, monospace",
+                      fill:       "#8fa3be",
+                      offset:     4,
+                    } : undefined}
+                  />
+                )
+              })}
+
               {/* Today line */}
               {TODAY_TICK >= 0 && TODAY_TICK <= 100 && (
                 <ReferenceLine
@@ -245,7 +324,7 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
                   strokeDasharray="4 3"
                   label={{
                     value:      "Today",
-                    position:   "top",
+                    position:   "insideBottomRight",
                     fontSize:   9,
                     fontFamily: "JetBrains Mono, monospace",
                     fill:       "#f59e0b",
@@ -260,14 +339,28 @@ export default function SchedulePanel({ section, onClose }: SchedulePanelProps) 
               </Bar>
 
               {/* Actual bars — status colour */}
-              <Bar dataKey="actualGap"    stackId="actual" fill="transparent" />
-              <Bar dataKey="actualWidth"  stackId="actual" radius={[2, 2, 2, 2]}>
+              <Bar dataKey="actualGap"   stackId="actual" fill="transparent" />
+              <Bar dataKey="actualWidth" stackId="actual" radius={[2, 2, 2, 2]}>
                 {ganttData.map((entry, i) => (
                   <Cell key={i} fill={entry.hasActual ? entry.colour : "transparent"} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Projected completion */}
+        <div className="flex items-center gap-2 mt-3 font-mono" style={{ fontSize: "11px" }}>
+          {forecast.isBlocked && (
+            <span style={{ color: "var(--status-blocked)" }}>⚠</span>
+          )}
+          <span style={{ color: "var(--text-muted)" }}>Projected completion:</span>
+          <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>
+            {forecast.dateLabel}
+          </span>
+          {forecast.hasOverrun && !forecast.isBlocked && (
+            <span style={{ color: "var(--status-blocked)" }}>(overdue)</span>
+          )}
         </div>
 
         {/* Overdue flags */}

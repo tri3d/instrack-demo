@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import {
   ReactFlow,
   MiniMap,
@@ -17,6 +17,7 @@ import StationNode, { type StationNodeData } from "./StationNode"
 import LogisticsNode, { type LogisticsNodeData } from "./LogisticsNode"
 import TrackEdge, { type TrackEdgeData } from "./TrackEdge"
 import { routeNodes, trackSections, logisticsPoints } from "@/data/route"
+import { deriveOverallStatus, STATUS_COLOUR, STATUS_BG, STATUS_LABEL } from "@/lib/status"
 import type { TrackSection } from "@/types"
 
 // ─── Layout constants ──────────────────────────────────────────────────────
@@ -41,6 +42,62 @@ function kmToX(km: number) {
   return km * KM_SCALE + 60
 }
 
+// ─── Hover tooltip component ───────────────────────────────────────────────
+
+interface EdgeTooltipProps {
+  section: TrackSection
+  x: number
+  y: number
+}
+
+function EdgeHoverTooltip({ section, x, y }: EdgeTooltipProps) {
+  const overall = deriveOverallStatus(section.installation, section.commissioning, section.handover)
+  const colour  = STATUS_COLOUR[overall]
+
+  return (
+    <div
+      style={{
+        position:     "fixed",
+        left:         x + 14,
+        top:          y - 10,
+        zIndex:       1000,
+        pointerEvents:"none",
+        background:   "var(--bg-card)",
+        border:       "1px solid var(--border-strong)",
+        borderRadius: "6px",
+        padding:      "10px 14px",
+        minWidth:     "164px",
+        boxShadow:    "0 4px 16px rgba(0,0,0,0.5)",
+        fontFamily:   "JetBrains Mono, monospace",
+      }}
+    >
+      <div style={{ fontWeight: 700, fontSize: "13px", color: "var(--text-primary)", marginBottom: "3px" }}>
+        {section.id}
+      </div>
+      <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginBottom: "7px" }}>
+        {section.length} · {section.type}
+      </div>
+      <div
+        style={{
+          display:      "inline-block",
+          fontSize:     "10px",
+          padding:      "1px 8px",
+          borderRadius: "4px",
+          border:       `1px solid ${colour}60`,
+          color:        colour,
+          background:   STATUS_BG[overall],
+          marginBottom: "8px",
+        }}
+      >
+        {STATUS_LABEL[overall]}
+      </div>
+      <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+        Click to view schedule →
+      </div>
+    </div>
+  )
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
 interface TrackSchematicProps {
@@ -52,9 +109,11 @@ export default function TrackSchematic({
   selectedSectionId,
   onSelectSection,
 }: TrackSchematicProps) {
+  const [edgeTooltip, setEdgeTooltip] = useState<EdgeTooltipProps | null>(null)
 
   const handleEdgeClick: EdgeMouseHandler = useCallback(
     (_, edge) => {
+      setEdgeTooltip(null)
       if (edge.id === selectedSectionId) {
         onSelectSection(null)
         return
@@ -64,6 +123,16 @@ export default function TrackSchematic({
     },
     [selectedSectionId, onSelectSection],
   )
+
+  const handleEdgeMouseEnter: EdgeMouseHandler = useCallback((event, edge) => {
+    const section = trackSections.find((s) => s.id === edge.id)
+    if (!section) return
+    setEdgeTooltip({ section, x: event.clientX, y: event.clientY })
+  }, [])
+
+  const handleEdgeMouseLeave: EdgeMouseHandler = useCallback(() => {
+    setEdgeTooltip(null)
+  }, [])
 
   const nodes = useMemo<Node[]>(() => {
     const stationNodes: Node<StationNodeData>[] = routeNodes.map((n) => ({
@@ -94,15 +163,13 @@ export default function TrackSchematic({
   }, [selectedSectionId])
 
   return (
-    // Outer container: gradient creates the "rail bed" band at ~60% height
-    // ReactFlow renders transparently on top so the band shows through the canvas
     <div
       className="w-full shrink-0"
       style={{
-        height: "280px",
-        borderTop: "1px solid var(--border-strong)",
-        borderBottom: "1px solid var(--border-strong)",
-        // Subtle inset band behind the track line (≈60% of 280px = 168px)
+        height:       "280px",
+        border:       "1px solid var(--border-strong)",
+        borderRadius: "8px",
+        overflow:     "hidden",
         background: `linear-gradient(
           to bottom,
           var(--bg-panel)  0px,
@@ -120,6 +187,8 @@ export default function TrackSchematic({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onEdgeClick={handleEdgeClick}
+        onEdgeMouseEnter={handleEdgeMouseEnter}
+        onEdgeMouseLeave={handleEdgeMouseLeave}
         fitView
         fitViewOptions={{ padding: 0.25 }}
         nodesDraggable={false}
@@ -150,6 +219,15 @@ export default function TrackSchematic({
           maskColor="#0b112080"
         />
       </ReactFlow>
+
+      {/* Edge hover tooltip — rendered outside ReactFlow to escape SVG context */}
+      {edgeTooltip && (
+        <EdgeHoverTooltip
+          section={edgeTooltip.section}
+          x={edgeTooltip.x}
+          y={edgeTooltip.y}
+        />
+      )}
     </div>
   )
 }
